@@ -1,25 +1,47 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
-import connectDB from "./db/connect.js";
+require("dotenv").config();
 
-dotenv.config();
-
+const mongoose = require("mongoose");
+const express = require("express");
+const { connectDB } = require("./config/connect.js");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+// const logRoutes = require("./routes/logRoutes.js");
+// const authRoutes = require("./routes/authRoutes.js");
+// const milestoneRoutes = require("./routes/milestoneRoutes.js");
+// const userRoutes = require("./routes/userRoutes.js");
 const app = express();
-app.use(express.json());
-app.use(cookieParser());
+
+//middleware
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
     credentials: true,
   })
 );
+app.use(express.json());
+app.use(cookieParser());
 
-const PORT = process.env.PORT || 5005;
+//mount routes
+// app.use("/api/logs",logRoutes);
+// app.use("/api/auth", authRoutes);
+// app.use("/api/users", milestoneRoutes);
+// app.use("/api/users", userRoutes);
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is Running on port ${PORT}`);
-  });
+
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+app.get("/", (_req, res) => {
+  res.send("Hello World!")
 });
+
+const PORT = process.env.PORT || 4000;
+connectDB(process.env.MONGO_URI)
+  .then(() => {
+    app.listen(PORT, () =>
+      console.log(`✅ API ready on http://localhost:${PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error("Server start failed:", err);
+    process.exit(1);
+  });
