@@ -32,3 +32,4 @@ const userSchema = new mongoose.Schema(
 
 module.exports(User, addictionTypes);
 
+
