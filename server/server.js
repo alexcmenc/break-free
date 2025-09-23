@@ -1,12 +1,13 @@
 require("dotenv").config();
-
-const mongoose = require("mongoose");
-const express = require("express");
-const { connectDB } = require("./config/connect.js");
+// const mongoose = require("mongoose");
 const cors = require("cors");
+const express = require("express");
 const cookieParser = require("cookie-parser");
+const { errorHandler } = require("./db/error-handling.js");
+const { connectDB } = require("./config/connect.js");
+const {authrequired} = require("./middleware/jwt.middleware.js");
 // const logRoutes = require("./routes/logRoutes.js");
-// const authRoutes = require("./routes/authRoutes.js");
+const authRoutes = require("./routes/auth.routes.js");
 // const milestoneRoutes = require("./routes/milestoneRoutes.js");
 // const userRoutes = require("./routes/userRoutes.js");
 const app = express();
@@ -23,7 +24,7 @@ app.use(cookieParser());
 
 //mount routes
 // app.use("/api/logs",logRoutes);
-// app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 // app.use("/api/users", milestoneRoutes);
 // app.use("/api/users", userRoutes);
 

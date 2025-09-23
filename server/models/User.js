@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-const User = mongoose.model("User", userSchema);
 const addictionTypes = ["smoking", "drinking", "vaping", "sugar", "food"];
 
 const userSchema = new mongoose.Schema(
@@ -30,6 +29,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports(User, addictionTypes);
+const User = mongoose.model("User", userSchema);
 
-
+module.exports = { User, addictionTypes };
