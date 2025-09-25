@@ -1,17 +1,18 @@
 require("dotenv").config();
 
-const mongoose = require("mongoose");
 const express = require("express");
 const { connectDB } = require("./config/connect.js");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const logRoutes = require("./routes/logRoutes.js");
-// const authRoutes = require("./routes/authRoutes.js");
-// const milestoneRoutes = require("./routes/milestoneRoutes.js");
-// const userRoutes = require("./routes/userRoutes.js");
+
+// ROUTES
+const logRoutes = require("./routes/log.routes.js");
+const authRoutes = require("./routes/auth.routes.js");
+const userRoutes = require("./routes/user.routes.js");
+
 const app = express();
 
-//middleware
+// middleware
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
@@ -21,22 +22,24 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-//mount routes
-// app.use("/api/logs",logRoutes);
-// app.use("/api/auth", authRoutes);
-// app.use("/api/users", milestoneRoutes);
-// app.use("/api/users", userRoutes);
+// mount routes
+app.use("/api/logs", logRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
-
+// health check
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.get("/", (_req, res) => {
-  res.send("Hello World!")
+  res.send("Hello World!");
 });
+
+// error handling
+require("./db/error-handling.js")(app);
 
 const PORT = process.env.PORT || 4000;
 connectDB(process.env.MONGO_URI)
-  .then(() => {
+.then(() => {
     app.listen(PORT, () =>
       console.log(`✅ API ready on http://localhost:${PORT}`)
     );

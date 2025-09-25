@@ -1,11 +1,11 @@
 const router = require("express").Router();
-const { authRequired } = required("../middleware/jwt.middleware.js");
+const { authRequired } = require("../middleware/jwt.middleware.js");
 const users = require("../controllers/userController");
 
 router.use(authRequired);
 
 router.get("/me", users.getMe);
 router.patch("/me", users.updateMe);
-router.patch("/me", users.changePassword);
+router.patch("/me/password", users.changePassword);
 
 module.exports = router;
