@@ -23,12 +23,12 @@ app.use(express.json());
 app.use(cookieParser());
 
 // mount routes
-app.use("/api/logs", logRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+app.use("/logs", logRoutes);
+app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
 
 // health check
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => res.json({ status: "We are Ready To Go" }));
 
 app.get("/", (_req, res) => {
   res.send("Hello World!");
@@ -37,7 +37,7 @@ app.get("/", (_req, res) => {
 // error handling
 require("./db/error-handling.js")(app);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5005;
 connectDB(process.env.MONGO_URI)
 .then(() => {
     app.listen(PORT, () =>
