@@ -131,11 +131,15 @@ dist
 .env
 .DS_Store
 
+# Ignore code folder
+/code/
 
+# Ignore package files
+package-lock.json
+package.json
 
-
-
-
+# Ignore read.me
+read.me
 
 **/node_modules/
 **/node_modules/
