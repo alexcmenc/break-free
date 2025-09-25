@@ -38,7 +38,7 @@ exports.updateMe = async (req, res, next) => {
     const updates = {};
 
     if (typeof req.body.username !== "undefined") updates.username = req.body.username;
-    if(typeof req.body.email !== "undefined") updates.email = req.body.username;
+    if(typeof req.body.email !== "undefined") updates.email = req.body.email;
     if (typeof req.body.addictionType !== "undefined") updates.addictionType = req.body.addictionType;
     if(typeof req.body.quitDate !== "undefined") {
       const d = parseDate(req.body.quitDate);
@@ -95,6 +95,6 @@ exports.changePassword = async (req, res, next) => {
 
 
   } catch (error) {
-    next(err);
+    next(error);
   }
 }

@@ -1,23 +1,22 @@
 const router = require("express").Router();
 const logs = require("../controllers/logController");
-const authRequired = require("../middleware/jwt.middleware");
+const { authRequired } = require("../middleware/jwt.middleware.js");
 
 router.use(authRequired);
 
-//list with filter / pagination
+// list with filter / pagination
 router.get("/", logs.listLogs);
 
-//create
+// create
 router.post("/", logs.createLog);
 
-//Read one
+// read one
 router.get("/:id", logs.getLog);
 
-//Update one
-
+// update one
 router.patch("/:id", logs.updateLog);
 
-//Delete
+// delete
 router.delete("/:id", logs.deleteLogs);
 
 module.exports = router;
