@@ -1,47 +1,48 @@
-require("dotenv").config();
+const env = process.env.NODE_ENV || "development";
+require("dotenv").config({ path: `.env.${env}` });
 
 const express = require("express");
-const { connectDB } = require("./config/connect.js");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const { connectDB } = require("./config/connect.js");
 
-// ROUTES
+// Routes
 const logRoutes = require("./routes/log.routes.js");
 const authRoutes = require("./routes/auth.routes.js");
 const userRoutes = require("./routes/user.routes.js");
 
 const app = express();
 
-// middleware
+app.set("trust proxy", 1);
+
+// Middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
     credentials: true,
   })
 );
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
-// mount routes
-app.use("/logs", logRoutes);
-app.use("/auth", authRoutes);
-app.use("/users", userRoutes);
+// Routes
+app.use("/api/logs", logRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
-// health check
-app.get("/health", (_req, res) => res.json({ status: "We are Ready To Go" }));
+// Health check
+app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/", (_req, res) => res.send("Hello World!"));
 
-app.get("/", (_req, res) => {
-  res.send("Hello World!");
-});
-
-// error handling
+// Centralized error handling
 require("./db/error-handling.js")(app);
 
+// Start
 const PORT = process.env.PORT || 5005;
 connectDB(process.env.MONGO_URI)
-.then(() => {
-    app.listen(PORT, () =>
-      console.log(`✅ API ready on http://localhost:${PORT}`)
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () =>
+      console.log(`✅ API ready on port ${PORT} (env: ${env})`)
     );
   })
   .catch((err) => {

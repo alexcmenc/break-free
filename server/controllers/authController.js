@@ -20,14 +20,30 @@ function sendTokenCookie(res, userId) {
 
 exports.signup = async (req, res, next) => {
   try {
-    const { username, email, password, addictionType, quitDate } = req.body;
+    let { username, email, password, addictionType, quitDate } = req.body;
 
+    //basic checks
+    if (!email || !password)
+      return res.status(400).json({ error: "Email and password required" });
+
+    //normalize email
+    email = String(email).trim().toLowerCase();
+
+    //parse date if provided
+    if (quitDate) {
+      const d = new Date(quitDate);
+      quitDate = isNaN(d) ? undefined : d;
+    }
+
+    //uniques
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ error: "Email already in use" });
 
+    //hash
     const passwordHash = await bcrypt.hash(password, 12);
 
+    //create
     const user = await User.create({
       username,
       email,
@@ -36,9 +52,10 @@ exports.signup = async (req, res, next) => {
       quitDate,
     });
 
-    // optional auto-login
+    //auto-login
     sendTokenCookie(res, user._id);
 
+    //minimal response
     res.status(201).json({
       message: "User created",
       userId: user._id,
@@ -54,16 +71,26 @@ exports.signup = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
+    //basic checks
+    if (!email || !password)
+      return res.status(400).json({ error: "Email and password required" });
+
+    //normalize email
+    email = String(email).trim().toLowerCase();
+
+    //find user
     const user = await User.findOne({ email });
     if (!user)
       return res.status(401).json({ error: "Invalid email or password" });
 
+    //compare password
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok)
       return res.status(401).json({ error: "Invalid email or password" });
 
+    // 5) set cookie + respond
     sendTokenCookie(res, user._id);
 
     res.json({
@@ -80,7 +107,6 @@ exports.login = async (req, res, next) => {
 };
 
 exports.verify = (req, res) => {
-  // authRequired middleware should set req.user.id
   res.status(200).json({ message: "Token is valid", userId: req.user.id });
 };
 

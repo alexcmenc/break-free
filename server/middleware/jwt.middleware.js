@@ -5,7 +5,7 @@ function authRequired(req, res, next) {
   let token = null;
 
   if (auth && auth.toLowerCase().startsWith("bearer ")) {
-    token = auth.slice(7).trim(); // after "Bearer "
+    token = auth.slice(7).trim();
   } else {
     token = req.cookies?.token || null;
   }
