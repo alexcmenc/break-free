@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const addictionTypes = ["smoking", "drinking", "vaping", "sugar", "food"];
 
+//userSchema.model
 const userSchema = new mongoose.Schema(
   {
     username: {
