@@ -1,9 +1,58 @@
-const { Log } = require("../models/Log");
+const { Log, moodScale } = require("../models/Log");
 
 //safely parses date strings
 function parseDate(input) {
   const d = new Date(input);
   return isNaN(d) ? null : d;
+}
+
+function normalizeString(value) {
+  if (typeof value !== "string") return "";
+  return value.trim();
+}
+
+function limitLength(value, maxLength) {
+  if (!value) return "";
+  return value.slice(0, maxLength);
+}
+
+function normalizeStringArray(input, maxItems = 6, itemMaxLength = 60) {
+  const raw = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+    ? input.split(",")
+    : [];
+
+  const cleaned = raw
+    .map((item) => normalizeString(item))
+    .filter(Boolean)
+    .map((item) => limitLength(item, itemMaxLength));
+
+  return Array.from(new Set(cleaned)).slice(0, maxItems);
+}
+
+function coerceMood(value) {
+  const candidate = normalizeString(value);
+  if (!candidate) return null;
+  return moodScale.includes(candidate) ? candidate : null;
+}
+
+function coerceCravingLevel(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  const rounded = Math.round(number);
+  if (rounded < 0) return 0;
+  if (rounded > 5) return 5;
+  return rounded;
+}
+
+function coerceBoolean(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") return true;
+    if (value.toLowerCase() === "false") return false;
+  }
+  return Boolean(value);
 }
 
 async function listLogs(req, res, next) {
@@ -30,10 +79,10 @@ async function listLogs(req, res, next) {
     //slip
     if (typeof slip !== "undefined") q.slip = slip === "true";
 
-    const data = (await Log.find(q))
-      .toSorted({ at: -1 })
-      .limit(limit)
-      .skip(skip);
+    const data = await Log.find(q)
+      .sort({ at: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.json(data);
   } catch (error) {
@@ -43,17 +92,32 @@ async function listLogs(req, res, next) {
 
 //POST api/logs
 
+const NOTE_LIMIT = 1000;
+const GRATITUDE_LIMIT = 240;
+
 async function createLog(req, res, next) {
   try {
+    const at = req.body.at ? parseDate(req.body.at) : null;
+
+    const rawMood = req.body.mood;
+    const mood = coerceMood(rawMood);
+    if (normalizeString(rawMood) && !mood) {
+      return res.status(400).json({ error: "Mood value not supported" });
+    }
+
     const payload = {
       user: req.user.id,
-      note: typeof req.body.note === "string" ? req.body.note : "",
-      mood: typeof req.body.mood === "string" ? req.body.mood : null,
-      slip: Boolean(req.body.slip),
-      at: req.body.at ? parseDate(req.body.at) : undefined,
+      note: limitLength(normalizeString(req.body.note), NOTE_LIMIT),
+      mood,
+      slip: coerceBoolean(req.body.slip),
+      cravingLevel: coerceCravingLevel(req.body.cravingLevel),
+      triggers: normalizeStringArray(req.body.triggers),
+      copingActions: normalizeStringArray(req.body.copingActions),
+      gratitude: limitLength(normalizeString(req.body.gratitude), GRATITUDE_LIMIT),
+      tags: normalizeStringArray(req.body.tags, 8, 40),
     };
 
-    if (payload.at === "null") delete payload.at;
+    if (at) payload.at = at;
 
     const created = await Log.create(payload);
     res.status(201).json(created);
@@ -79,14 +143,52 @@ async function getLog(req, res, next) {
 async function updateLog(req, res, next) {
   try {
     const update = {};
-    if (typeof req.body.note !== "undefined") update.note = req.body.note;
-    if (typeof req.body.mood !== "undefined") update.mood = req.body.mood;
-    if (typeof req.body.slip !== "undefined")
-      update.slip = Boolean(req.body.slip);
+
+    if (typeof req.body.note !== "undefined") {
+      update.note = limitLength(normalizeString(req.body.note), NOTE_LIMIT);
+    }
+
+    if (typeof req.body.mood !== "undefined") {
+      const rawMood = req.body.mood;
+      const mood = coerceMood(rawMood);
+      if (normalizeString(rawMood) && !mood) {
+        return res.status(400).json({ error: "Mood value not supported" });
+      }
+      update.mood = mood;
+    }
+
+    if (typeof req.body.slip !== "undefined") {
+      update.slip = coerceBoolean(req.body.slip);
+    }
+
+    if (typeof req.body.cravingLevel !== "undefined") {
+      update.cravingLevel = coerceCravingLevel(req.body.cravingLevel);
+    }
+
+    if (typeof req.body.triggers !== "undefined") {
+      update.triggers = normalizeStringArray(req.body.triggers);
+    }
+
+    if (typeof req.body.copingActions !== "undefined") {
+      update.copingActions = normalizeStringArray(req.body.copingActions);
+    }
+
+    if (typeof req.body.gratitude !== "undefined") {
+      update.gratitude = limitLength(
+        normalizeString(req.body.gratitude),
+        GRATITUDE_LIMIT
+      );
+    }
+
+    if (typeof req.body.tags !== "undefined") {
+      update.tags = normalizeStringArray(req.body.tags, 8, 40);
+    }
+
     if (typeof req.body.at !== "undefined") {
       const d = parseDate(req.body.at);
       if (d) update.at = d;
     }
+
     const updated = await Log.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
       { $set: update },

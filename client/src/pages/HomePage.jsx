@@ -1,6 +1,23 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useAuthContext } from "../context/useAuthContext.js";
+import { useThemeContext } from "../context/useThemeContext.js";
+
+const DAWN_HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1600&q=80",
+];
+
+const DUSK_HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1520013124535-0b6b1f5f0597?auto=format&fit=crop&w=1600&q=80",
+];
 
 export default function HomePage() {
+  const { user } = useAuthContext();
+  const { theme } = useThemeContext();
   // Motivational quotes
   const quotes = [
     "One day at a time.",
@@ -24,14 +41,10 @@ export default function HomePage() {
   ];
   const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-  // Hero images
-  const heroImages = [
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e", // ocean
-    "https://images.unsplash.com/photo-1501785888041-af3ef285b470", // mountain
-    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee", // forest
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e", // sunrise
-  ];
-  const randomImage = heroImages[Math.floor(Math.random() * heroImages.length)];
+  const randomImage = useMemo(() => {
+    const list = theme === "dusk" ? DUSK_HERO_IMAGES : DAWN_HERO_IMAGES;
+    return list[Math.floor(Math.random() * list.length)];
+  }, [theme]);
 
   return (
     <div className="page page-home">
@@ -39,18 +52,31 @@ export default function HomePage() {
         <img src={randomImage} alt="Calm background" className="hero-img" />
         <div className="hero-overlay">
           <span className="badge">Your recovery companion</span>
-          <h1 className="hero-title">Break Free</h1>
+          <h1 className="hero-title">BFree</h1>
           <p className="hero-subtitle">
             A gentle space to log progress, celebrate milestones, and stay
             connected to your "why" while you reduce or quit any addiction.
           </p>
           <div className="actions">
-            <Link className="btn btn-primary" to="/signup">
-              Start your journey
-            </Link>
-            <Link className="btn btn-ghost hero-link" to="/login">
-              I already have an account
-            </Link>
+            {!user ? (
+              <>
+                <Link className="btn btn-primary" to="/signup">
+                  Start your journey
+                </Link>
+                <Link className="btn btn-ghost hero-link" to="/login">
+                  I already have an account
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link className="btn btn-primary" to="/profile">
+                  Go to dashboard
+                </Link>
+                <Link className="btn btn-ghost hero-link" to="/settings">
+                  Personalise settings
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -93,12 +119,25 @@ export default function HomePage() {
           and watch resilience grow.
         </p>
         <div className="actions">
-          <Link className="btn btn-primary" to="/signup">
-            Create a free account
-          </Link>
-          <Link className="btn" to="/login">
-            Continue logging in
-          </Link>
+          {!user ? (
+            <>
+              <Link className="btn btn-primary" to="/signup">
+                Create a free account
+              </Link>
+              <Link className="btn" to="/login">
+                Continue logging in
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link className="btn btn-primary" to="/profile">
+                View your journey
+              </Link>
+              <Link className="btn" to="/profile">
+                Review milestones
+              </Link>
+            </>
+          )}
         </div>
       </section>
     </div>

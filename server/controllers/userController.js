@@ -4,6 +4,7 @@ const { User, addictionTypes } = require("../models/User");
 //tiny helper: softly parse a date String
 
 function parseDate(value) {
+  if (value === null || value === "") return null;
   const d = new Date(value);
   return isNaN(d) ? null : d;
 }
@@ -18,7 +19,7 @@ exports.getMe = async (req, res, next) => {
     res.json({
       user: {
         id: user._id,
-        username: user.username,
+        name: user.username,
         email: user.email,
         addictionType: user.addictionType,
         quitDate: user.quitDate,
@@ -37,64 +38,72 @@ exports.updateMe = async (req, res, next) => {
   try {
     const updates = {};
 
-    if (typeof req.body.username !== "undefined") updates.username = req.body.username;
-    if(typeof req.body.email !== "undefined") updates.email = req.body.email;
+    const usernameInput =
+      typeof req.body.username === "string" && req.body.username.trim().length
+        ? req.body.username.trim()
+        : typeof req.body.name === "string"
+        ? req.body.name.trim()
+        : undefined;
+
+    if (typeof usernameInput !== "undefined") updates.username = usernameInput;
+    if (typeof req.body.email !== "undefined") updates.email = req.body.email;
     if (typeof req.body.addictionType !== "undefined") updates.addictionType = req.body.addictionType;
-    if(typeof req.body.quitDate !== "undefined") {
+    if (typeof req.body.quitDate !== "undefined") {
       const d = parseDate(req.body.quitDate);
-      if (d) updates.quitDate = d;
-    };
+      updates.quitDate = d;
+    }
 
     if (updates.email) {
-      const exists = await User.findOne({email: updates.email, _id: {$ne: req.user.id}});
-      if (exists) return res.status(400).json({error: "Email already in use"});
+      const exists = await User.findOne({
+        email: updates.email,
+        _id: { $ne: req.user.id },
+      });
+      if (exists) return res.status(400).json({ error: "Email already in use" });
     }
 
     const user = await User.findByIdAndUpdate(
-      req.user.id, 
-      {$set: updates},
-      {new: true, runValidators: true}
-    )
+      req.user.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
 
     if (!user) return res.status(404).json({error: "User not found"});
 
     res.json({
       user: {
         id: user._id,
-        username: user.username, 
-        email: user.email, 
-        addictionType: user.addictionType, 
-        quitDate: user.quitDate, 
-        createdAt: user.createdAt, 
-        updatedAt: user.updatedAt
+        name: user.username,
+        email: user.email,
+        addictionType: user.addictionType,
+        quitDate: user.quitDate,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
-    }
-    )
+    });
   } catch (error) {
-    next(error)
-  };
-  
-}
+    next(error);
+  }
+};
+
 exports.changePassword = async (req, res, next) => {
   try {
-    const {currentPassword, newPassword} = req.body;
+    const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({error: "All fields are required"});
+      return res.status(400).json({ error: "All fields are required" });
     }
 
     const user = await User.findById(req.user.id);
-    if(!user) return res.status(404).json({error: "User not found"});
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-    if(!ok) return res.status(400).json({error: "Please insert a valid password."});
+    if (!ok)
+      return res.status(400).json({ error: "Please insert a valid password." });
 
     user.passwordHash = await bcrypt.hash(newPassword, 12);
     await user.save();
 
-    res.json({message: "Password was successfully changed"});
-
-
+    res.json({ message: "Password was successfully changed" });
   } catch (error) {
     next(error);
   }
-}
+};

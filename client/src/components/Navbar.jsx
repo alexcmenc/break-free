@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuthContext } from "../context/useAuthContext.js";
+import { useThemeContext } from "../context/useThemeContext.js";
 import { useState, useRef, useEffect } from "react";
 
 export default function Navbar() {
@@ -8,6 +9,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const userMenuRef = useRef(null);
+  const { theme, toggleTheme } = useThemeContext();
+  const isDusk = theme === "dusk";
 
   const primaryLinks = [
     { to: "/about", label: "About" },
@@ -41,8 +44,8 @@ export default function Navbar() {
       <nav className="nav">
         {/* Left: Brand Logo */}
         <Link className="brand" to="/">
-          <img className="logo" src="/logo.jpg" alt="Break Free Logo" />
-          <span className="brand-text">Break Free</span>
+          <img className="logo" src="/logo.jpg" alt="BFree Logo" />
+          <span className="brand-text">BFree</span>
         </Link>
 
         <div className="nav-menu" ref={menuRef}>
@@ -73,7 +76,16 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="nav-right" ref={userMenuRef}>
-          {!user && (
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${isDusk ? "dawn" : "dusk"} theme`}
+            title={`Switch to ${isDusk ? "dawn" : "dusk"} theme`}
+          >
+            <span aria-hidden="true">{isDusk ? "🌅" : "🌙"}</span>
+          </button>
+          {!user ? (
             <>
               <Link className="nav-link" to="/login">
                 Log in
@@ -82,9 +94,7 @@ export default function Navbar() {
                 Sign up
               </Link>
             </>
-          )}
-
-          {user && (
+          ) : (
             <div className="user-menu">
               <div
                 className="avatar"
@@ -95,6 +105,9 @@ export default function Navbar() {
 
               {open && (
                 <div className="dropdown">
+                  <Link className="dropdown-link" to="/" onClick={() => setOpen(false)}>
+                    Home
+                  </Link>
                   <Link className="dropdown-link" to="/profile" onClick={() => setOpen(false)}>
                     Profile
                   </Link>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuthContext } from "../context/useAuthContext.js";
 import api from "../utils/api.js";
+import LogCapture from "./LogCapture.jsx";
+import { findMoodDetails } from "../constants/logOptions.js";
 
 function daysBetween(startDate) {
   if (!startDate) return null;
@@ -29,9 +31,13 @@ export default function Dashboard() {
         setError(null);
         const response = await api.get("/logs?limit=100");
         if (ignore) return;
-        setLogs(Array.isArray(response.data) ? response.data : response.data || []);
-      } catch (error) {
-        console.error("Failed to load logs", error);
+        const incoming = Array.isArray(response.data)
+          ? response.data
+          : response.data || [];
+        incoming.sort((a, b) => new Date(b.at) - new Date(a.at));
+        setLogs(incoming);
+      } catch (err) {
+        console.error("Failed to load logs", err);
         if (!ignore) setError("Could not load your recent logs yet.");
       } finally {
         if (!ignore) setLoading(false);
@@ -54,6 +60,8 @@ export default function Dashboard() {
         monthTotal: 0,
         slipFreeRate: 100,
         lastMood: null,
+        lastGratitude: null,
+        avgCraving: null,
         recent: [],
       };
     }
@@ -64,17 +72,31 @@ export default function Dashboard() {
     let slips = 0;
     let monthTotal = 0;
     let lastMood = null;
+    let lastGratitude = null;
+    let monthCravingTotal = 0;
+    let monthCravingCount = 0;
 
     logs.forEach((log) => {
       if (log.slip) slips += 1;
-      if (now - new Date(log.at).getTime() <= monthMs) monthTotal += 1;
+      const logTime = new Date(log.at).getTime();
+      if (now - logTime <= monthMs) {
+        monthTotal += 1;
+        if (typeof log.cravingLevel === "number") {
+          monthCravingTotal += log.cravingLevel;
+          monthCravingCount += 1;
+        }
+      }
       if (!lastMood && log.mood) lastMood = log.mood;
+      if (!lastGratitude && log.gratitude) lastGratitude = log.gratitude;
     });
 
     const total = logs.length;
     const slipFreeRate = total
       ? Math.round(((total - slips) / total) * 100)
       : 100;
+    const avgCraving = monthCravingCount
+      ? Number((monthCravingTotal / monthCravingCount).toFixed(1))
+      : null;
 
     return {
       total,
@@ -82,12 +104,27 @@ export default function Dashboard() {
       monthTotal,
       slipFreeRate,
       lastMood,
+      lastGratitude,
+      avgCraving,
       recent: logs.slice(0, 4),
     };
   }, [logs]);
 
+  const handleLogCreated = (log) => {
+    if (!log) return;
+    setLogs((prev) => {
+      const next = [log, ...prev];
+      next.sort((a, b) => new Date(b.at) - new Date(a.at));
+      return next.slice(0, 120);
+    });
+  };
+
+  const lastMoodDetails = stats.lastMood ? findMoodDetails(stats.lastMood) : null;
+
   return (
     <div className="dashboard glass-panel">
+      <LogCapture onCreated={handleLogCreated} />
+
       <h2 className="title">Welcome back{user ? `, ${user.name}` : ""} 👋</h2>
       <p className="subtitle">
         Here’s a snapshot of how your journey is taking shape right now.
@@ -127,6 +164,11 @@ export default function Dashboard() {
             {stats.slips
               ? `${stats.slips} slip${stats.slips === 1 ? "" : "s"} logged`
               : "You’ve stayed consistent—keep going!"}
+            {typeof stats.avgCraving === "number" && (
+              <span className="stat-addon">
+                Avg craving: {stats.avgCraving}/5 over 30 days
+              </span>
+            )}
           </p>
         </div>
       </div>
@@ -134,7 +176,11 @@ export default function Dashboard() {
       <div className="card recent-logs">
         <div className="recent-header">
           <h3 className="card-title">Recent reflections</h3>
-          {stats.lastMood && <span className="badge">Last mood: {stats.lastMood}</span>}
+          {lastMoodDetails && (
+            <span className="badge">
+              Last mood: {lastMoodDetails.emoji} {lastMoodDetails.label}
+            </span>
+          )}
         </div>
 
         {error && <p className="error">{error}</p>}
@@ -149,23 +195,55 @@ export default function Dashboard() {
 
         {!loading && stats.recent.length > 0 && (
           <ul className="recent-list">
-            {stats.recent.map((log) => (
-              <li key={log._id} className="recent-item">
-                <div>
-                  <p className="recent-date">
-                    {new Date(log.at).toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
-                  {log.note && <p className="recent-note">{log.note}</p>}
-                </div>
-                <div className="recent-tags">
-                  {log.mood && <span className="tag">{log.mood}</span>}
-                  {log.slip && <span className="tag tag-slip">Slip</span>}
-                </div>
-              </li>
-            ))}
+            {stats.recent.map((log) => {
+              const moodDetails = log.mood ? findMoodDetails(log.mood) : null;
+              return (
+                <li key={log._id} className="recent-item">
+                  <div>
+                    <p className="recent-date">
+                      {new Date(log.at).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                    {log.note && <p className="recent-note">{log.note}</p>}
+                    {log.gratitude && (
+                      <p className="recent-meta">
+                        <strong>Grateful:</strong> {log.gratitude}
+                      </p>
+                    )}
+                    {Array.isArray(log.triggers) && log.triggers.length > 0 && (
+                      <p className="recent-meta">
+                        <strong>Triggers:</strong> {log.triggers.join(", ")}
+                      </p>
+                    )}
+                    {Array.isArray(log.copingActions) &&
+                      log.copingActions.length > 0 && (
+                        <p className="recent-meta">
+                          <strong>Support moves:</strong> {log.copingActions.join(", ")}
+                        </p>
+                      )}
+                  </div>
+                  <div className="recent-tags">
+                    {moodDetails && (
+                      <span className="tag">
+                        {moodDetails.emoji} {moodDetails.label}
+                      </span>
+                    )}
+                    {typeof log.cravingLevel === "number" && (
+                      <span className="tag">Craving {log.cravingLevel}/5</span>
+                    )}
+                    {log.slip && <span className="tag tag-slip">Slip</span>}
+                    {Array.isArray(log.tags) &&
+                      log.tags.map((tag) => (
+                        <span key={`${log._id}-tag-${tag}`} className="tag">
+                          #{tag}
+                        </span>
+                      ))}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

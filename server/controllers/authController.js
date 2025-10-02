@@ -2,9 +2,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { User } = require("../models/User.js");
 
-// helper: set an httpOnly cookie named "token"
+// helper: set an httpOnly cookie named "token" and return it for clients that store tokens
 function sendTokenCookie(res, userId) {
-  const token = jwt.sign({}, process.env.JWT_SECRET, {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is not configured");
+
+  const token = jwt.sign({}, secret, {
     expiresIn: "7d",
     subject: String(userId),
     algorithm: "HS256",
@@ -16,13 +19,23 @@ function sendTokenCookie(res, userId) {
     secure: process.env.NODE_ENV === "production",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
+
+  return token;
 }
 
 exports.signup = async (req, res, next) => {
   try {
-    let { username, email, password, addictionType, quitDate } = req.body;
+    let { username, name, email, password, addictionType, quitDate } = req.body;
+
+    username = typeof username === "string" && username.trim().length
+      ? username.trim()
+      : typeof name === "string"
+      ? name.trim()
+      : "";
 
     //basic checks
+    if (!username)
+      return res.status(400).json({ error: "Username is required" });
     if (!email || !password)
       return res.status(400).json({ error: "Email and password required" });
 
@@ -53,16 +66,23 @@ exports.signup = async (req, res, next) => {
     });
 
     //auto-login
-    sendTokenCookie(res, user._id);
+    const token = sendTokenCookie(res, user._id);
+
+    const payload = {
+      id: user._id,
+      name: user.username,
+      email: user.email,
+      addictionType: user.addictionType,
+      quitDate: user.quitDate,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
 
     //minimal response
     res.status(201).json({
       message: "User created",
-      userId: user._id,
-      username: user.username,
-      email: user.email,
-      addictionType: user.addictionType,
-      quitDate: user.quitDate,
+      authToken: token,
+      payload,
     });
   } catch (err) {
     next(err);
@@ -91,23 +111,48 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ error: "Invalid email or password" });
 
     // 5) set cookie + respond
-    sendTokenCookie(res, user._id);
+    const token = sendTokenCookie(res, user._id);
 
-    res.json({
-      message: "Login successful",
-      userId: user._id,
-      username: user.username,
+    const payload = {
+      id: user._id,
+      name: user.username,
       email: user.email,
       addictionType: user.addictionType,
       quitDate: user.quitDate,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    res.json({
+      message: "Login successful",
+      authToken: token,
+      payload,
     });
   } catch (err) {
     next(err);
   }
 };
 
-exports.verify = (req, res) => {
-  res.status(200).json({ message: "Token is valid", userId: req.user.id });
+exports.verify = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json({
+      message: "Token is valid",
+      payload: {
+        id: user._id,
+        name: user.username,
+        email: user.email,
+        addictionType: user.addictionType,
+        quitDate: user.quitDate,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.logout = (req, res) => {
