@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="footer">
@@ -5,9 +7,9 @@ export default function Footer() {
         © {new Date().getFullYear()} Break Free — Built with ❤️
       </p>
       <div className="footer-links">
-        <a href="/resources" className="footer-link">Resources</a>
-        <a href="/about" className="footer-link">About</a>
-        <a href="/contact" className="footer-link">Contact</a>
+        <Link to="/resources" className="footer-link">Resources</Link>
+        <Link to="/about" className="footer-link">About</Link>
+        <Link to="/support" className="footer-link">Support</Link>
       </div>
     </footer>
   );

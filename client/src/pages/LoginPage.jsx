@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuthContext } from "../context/auth.context.jsx";
+import { useAuthContext } from "../context/useAuthContext.js";
 import { Link } from "react-router-dom";
 
 export default function LoginPage() {

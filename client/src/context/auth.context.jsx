@@ -1,25 +1,20 @@
-import { createContext, useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api.js";
-
-const AuthContext = createContext();
+import { AuthContext } from "./AuthContext.js";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const verify = async (token) => {
-    if (!token) {
-      setUser(null);
-      localStorage.removeItem("authToken");
-      setLoading(false);
-      return;
-    }
+  const verify = async (token, { showLoader = true } = {}) => {
+    if (showLoader) setLoading(true);
     try {
-      const response = await api.get("/auth/verify", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : undefined;
+      const response = await api.get("/auth/verify", config);
       if (response.status === 200) {
         setUser(response.data.payload);
       } else {
@@ -28,9 +23,9 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.log("verify error:", err);
       setUser(null);
-      localStorage.removeItem("authToken");
+      if (token) localStorage.removeItem("authToken");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -39,7 +34,14 @@ export function AuthProvider({ children }) {
     try {
       const response = await api.post("/auth/signup", body);
       if (response.status === 201 || response.status === 200) {
-        if (typeof setToggle === "function") setToggle((prev) => !prev);
+        const token = response.data.authToken;
+        if (token) {
+          localStorage.setItem("authToken", token);
+          await verify(token);
+          navigate("/profile");
+        } else if (typeof setToggle === "function") {
+          setToggle((prev) => !prev);
+        }
       }
     } catch (err) {
       console.log("signup error:", err);
@@ -51,8 +53,9 @@ export function AuthProvider({ children }) {
     try {
       const response = await api.post("/auth/login", body);
       if (response.status === 200 || response.status === 201) {
-        localStorage.setItem("authToken", response.data.authToken);
-        await verify(response.data.authToken);
+        const token = response.data.authToken;
+        if (token) localStorage.setItem("authToken", token);
+        await verify(token);
         navigate("/profile");
       }
     } catch (err) {
@@ -61,9 +64,15 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    api.post("/auth/logout").catch(() => {});
     localStorage.removeItem("authToken");
     setUser(null);
     navigate("/");
+  };
+
+  const refreshUser = async () => {
+    const token = localStorage.getItem("authToken");
+    await verify(token, { showLoader: false });
   };
 
   useEffect(() => {
@@ -72,14 +81,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, signup, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuthContext() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuthContext must be used inside AuthProvider");
-  return ctx;
 }

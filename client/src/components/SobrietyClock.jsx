@@ -1,36 +1,50 @@
 import { useEffect, useState } from "react";
+import { useAuthContext } from "../context/useAuthContext.js";
+
+function calculateDiff(startDate) {
+  if (!startDate) return null;
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return null;
+  const now = new Date();
+  const diff = now - start;
+  if (diff < 0) return null;
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+  return { days, hours, minutes, seconds };
+}
 
 export default function SobrietyClock() {
-  const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-  const startDate = localStorage.getItem("sobrietyStart") || new Date().toISOString();
+  const { user } = useAuthContext();
+  const quitDate = user?.quitDate;
+  const [time, setTime] = useState(() => calculateDiff(quitDate));
 
   useEffect(() => {
-    localStorage.setItem("sobrietyStart", startDate);
+    if (!quitDate) {
+      setTime(null);
+      return undefined;
+    }
 
-    const tick = () => {
-      const now = new Date();
-      const start = new Date(startDate);
-      const diff = now - start;
+    setTime(calculateDiff(quitDate));
+    const interval = setInterval(() => {
+      setTime(calculateDiff(quitDate));
+    }, 1000);
 
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-      const seconds = Math.floor((diff / 1000) % 60);
-
-      setTime({ days, hours, minutes, seconds });
-    };
-
-    tick();
-    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [startDate]);
+  }, [quitDate]);
 
   return (
     <div className="card clock">
       <h3 className="card-title">Sobriety Clock</h3>
-      <p className="clock-time">
-        {time.days}d {time.hours}h {time.minutes}m {time.seconds}s
-      </p>
+      {time ? (
+        <p className="clock-time">
+          {time.days}d {time.hours}h {time.minutes}m {time.seconds}s
+        </p>
+      ) : (
+        <p className="muted">Set your quit date to start the live clock.</p>
+      )}
     </div>
   );
 }

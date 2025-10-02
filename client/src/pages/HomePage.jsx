@@ -35,29 +35,72 @@ export default function HomePage() {
 
   return (
     <div className="page page-home">
-      {/* Hero Section */}
-      <div className="hero">
+      <section className="hero">
         <img src={randomImage} alt="Calm background" className="hero-img" />
         <div className="hero-overlay">
+          <span className="badge">Your recovery companion</span>
           <h1 className="hero-title">Break Free</h1>
           <p className="hero-subtitle">
-            Track your recovery journey with hope and strength.
+            A gentle space to log progress, celebrate milestones, and stay
+            connected to your "why" while you reduce or quit any addiction.
           </p>
+          <div className="actions">
+            <Link className="btn btn-primary" to="/signup">
+              Start your journey
+            </Link>
+            <Link className="btn btn-ghost hero-link" to="/login">
+              I already have an account
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Quote */}
-      <p className="quote">“{randomQuote}”</p>
+      <section className="glass-panel">
+        <p className="quote">“{randomQuote}”</p>
+      </section>
 
-      {/* Actions */}
-      <div className="actions">
-        <Link className="btn btn-primary" to="/login">
-          Log in
-        </Link>
-        <Link className="btn" to="/signup">
-          Sign up
-        </Link>
-      </div>
+      <section className="support-grid">
+        <article className="support-card">
+          <div className="support-icon" aria-hidden="true">🧭</div>
+          <h3>Daily clarity</h3>
+          <p>
+            Check in each day, reflect on your mood, and spot patterns that
+            strengthen your commitment to change.
+          </p>
+        </article>
+        <article className="support-card">
+          <div className="support-icon" aria-hidden="true">🎯</div>
+          <h3>Milestones that matter</h3>
+          <p>
+            Celebrate meaningful wins—whether that is one day less, a week
+            clean, or a personal breakthrough worth sharing.
+          </p>
+        </article>
+        <article className="support-card">
+          <div className="support-icon" aria-hidden="true">🤝</div>
+          <h3>Always on your side</h3>
+          <p>
+            Secure authentication keeps your story private while keeping your
+            tools close on any device.
+          </p>
+        </article>
+      </section>
+
+      <section className="glass-panel journey">
+        <h2 className="title">Ready when you are</h2>
+        <p className="subtitle">
+          Choose your starting point, track cravings or slips without shame,
+          and watch resilience grow.
+        </p>
+        <div className="actions">
+          <Link className="btn btn-primary" to="/signup">
+            Create a free account
+          </Link>
+          <Link className="btn" to="/login">
+            Continue logging in
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
