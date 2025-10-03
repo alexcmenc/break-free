@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
       const config = token
         ? { headers: { Authorization: `Bearer ${token}` } }
         : undefined;
-      const response = await api.get("/auth/verify", config);
+      const response = await api.get("/api/auth/verify", config);
       if (response.status === 200) {
         setUser(response.data.payload);
       } else {
@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
   const signup = async (body, setToggle, e) => {
     if (e?.preventDefault) e.preventDefault();
     try {
-      const response = await api.post("/auth/signup", body);
+      const response = await api.post("/api/auth/signup", body);
       if (response.status === 201 || response.status === 200) {
         const token = response.data.authToken;
         if (token) {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
   const login = async (body, e) => {
     if (e?.preventDefault) e.preventDefault();
     try {
-      const response = await api.post("/auth/login", body);
+      const response = await api.post("api/auth/login", body);
       if (response.status === 200 || response.status === 201) {
         const token = response.data.authToken;
         if (token) localStorage.setItem("authToken", token);

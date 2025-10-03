@@ -15,7 +15,7 @@ export default function JourneyTracker() {
     try {
       setPending(true);
       setError(null);
-      await api.patch("/users/me", { quitDate: new Date().toISOString() });
+      await api.patch("/api/users/me", { quitDate: new Date().toISOString() });
       await refreshUser();
     } catch (err) {
       const message =
@@ -30,7 +30,7 @@ export default function JourneyTracker() {
     try {
       setPending(true);
       setError(null);
-      await api.patch("/users/me", { quitDate: null });
+      await api.patch("/api/users/me", { quitDate: null });
       await refreshUser();
     } catch (err) {
       const message =
